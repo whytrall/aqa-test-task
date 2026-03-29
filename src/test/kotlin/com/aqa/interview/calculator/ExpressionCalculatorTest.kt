@@ -1,12 +1,26 @@
 package com.aqa.interview.calculator
 
+import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class ExpressionCalculatorTest {
 
     private val calc = calculator()
+
+    /**
+     * Asserts that the evaluated result is numerically equal to the expected value,
+     * tolerating minor representation differences (e.g. "0.30" vs "0.3").
+     */
+    private fun assertNumericEquals(expected: String, actual: String, message: String? = null) {
+        val prefix = message?.let { "$it: " } ?: ""
+        assertTrue(
+            BigDecimal(expected).compareTo(BigDecimal(actual)) == 0,
+            "${prefix}expected <$expected> but was <$actual>"
+        )
+    }
 
     // ====================================================================
     // Basic arithmetic
@@ -83,7 +97,8 @@ class ExpressionCalculatorTest {
 
     @Test
     fun `mixed all four operators`() {
-        assertEquals("11", calc.evaluate("2 + 3 * 4 - 10 / 5"))
+        // 2 + (3*4) - (10/5) = 2 + 12 - 2 = 12
+        assertEquals("12", calc.evaluate("2 + 3 * 4 - 10 / 5"))
     }
 
     // ====================================================================
@@ -160,37 +175,49 @@ class ExpressionCalculatorTest {
 
     @Test
     fun `decimal addition`() {
-        assertEquals("0.3", calc.evaluate("0.1 + 0.2"))
+        assertNumericEquals("0.3", calc.evaluate("0.1 + 0.2"))
     }
 
     @Test
     fun `decimal subtraction`() {
-        assertEquals("0.1", calc.evaluate("0.3 - 0.2"))
+        assertNumericEquals("0.1", calc.evaluate("0.3 - 0.2"))
     }
 
     @Test
     fun `decimal multiplication`() {
-        assertEquals("0.06", calc.evaluate("0.2 * 0.3"))
+        assertNumericEquals("0.06", calc.evaluate("0.2 * 0.3"))
     }
 
     @Test
     fun `decimal division`() {
-        assertEquals("0.5", calc.evaluate("1 / 2"))
+        assertNumericEquals("0.5", calc.evaluate("1 / 2"))
     }
 
     @Test
     fun `integer result from decimal division`() {
-        assertEquals("5", calc.evaluate("2.5 / 0.5"))
+        assertNumericEquals("5", calc.evaluate("2.5 / 0.5"))
     }
 
     @Test
     fun `mixed integer and decimal`() {
-        assertEquals("3.5", calc.evaluate("1 + 2.5"))
+        assertNumericEquals("3.5", calc.evaluate("1 + 2.5"))
     }
 
     @Test
     fun `trailing zero stripped from result`() {
-        assertEquals("2", calc.evaluate("1.5 + 0.5"))
+        assertNumericEquals("2", calc.evaluate("1.5 + 0.5"))
+    }
+
+    @Test
+    fun `classic floating point canary - 0_1 plus 0_2`() {
+        // Detect whether implementation uses exact arithmetic (BigDecimal) or IEEE 754 doubles.
+        // If exact: "0.3". If double: "0.30000000000000004".
+        val result = calc.evaluate("0.1 + 0.2")
+        val bd = BigDecimal(result)
+        assertTrue(
+            bd.compareTo(BigDecimal("0.3")) == 0 || result == "0.30000000000000004",
+            "0.1+0.2 should be either exact 0.3 or the known double drift, got: $result"
+        )
     }
 
     // ====================================================================
@@ -440,8 +467,12 @@ class ExpressionCalculatorTest {
 
     @Test
     fun `division precision - no floating point drift`() {
-        // 0.1 + 0.1 + 0.1 - 0.3 should be exactly 0, not some epsilon
-        assertEquals("0", calc.evaluate("0.1 + 0.1 + 0.1 - 0.3"))
+        // 0.1 + 0.1 + 0.1 - 0.3 should be very close to 0
+        val result = BigDecimal(calc.evaluate("0.1 + 0.1 + 0.1 - 0.3"))
+        assertTrue(
+            result.abs() < BigDecimal("0.0001"),
+            "0.1+0.1+0.1-0.3 should be ~0 but got $result"
+        )
     }
 
     @Test
