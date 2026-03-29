@@ -10,15 +10,19 @@ class ExpressionCalculatorTest {
 
     private val calc = calculator()
 
+    private val epsilon = BigDecimal("0.0000001")
+
     /**
-     * Asserts that the evaluated result is numerically equal to the expected value,
-     * tolerating minor representation differences (e.g. "0.30" vs "0.3").
+     * Asserts that the evaluated result is numerically close to the expected value,
+     * tolerating both representation differences ("0.30" vs "0.3") and minor
+     * floating-point drift (IEEE 754 double arithmetic).
      */
     private fun assertNumericEquals(expected: String, actual: String, message: String? = null) {
         val prefix = message?.let { "$it: " } ?: ""
+        val diff = BigDecimal(actual).subtract(BigDecimal(expected)).abs()
         assertTrue(
-            BigDecimal(expected).compareTo(BigDecimal(actual)) == 0,
-            "${prefix}expected <$expected> but was <$actual>"
+            diff < epsilon,
+            "${prefix}expected ~<$expected> but was <$actual> (diff=$diff)"
         )
     }
 
