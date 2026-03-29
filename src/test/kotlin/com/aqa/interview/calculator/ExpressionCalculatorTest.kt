@@ -213,15 +213,10 @@ class ExpressionCalculatorTest {
     }
 
     @Test
-    fun `classic floating point canary - 0_1 plus 0_2`() {
-        // Detect whether implementation uses exact arithmetic (BigDecimal) or IEEE 754 doubles.
-        // If exact: "0.3". If double: "0.30000000000000004".
-        val result = calc.evaluate("0.1 + 0.2")
-        val bd = BigDecimal(result)
-        assertTrue(
-            bd.compareTo(BigDecimal("0.3")) == 0 || result == "0.30000000000000004",
-            "0.1+0.2 should be either exact 0.3 or the known double drift, got: $result"
-        )
+    fun `classic floating point canary - 0_1 plus 0_2 is exactly 0_3`() {
+        // A proper calculator must return "0.3", not "0.30000000000000004".
+        // IEEE 754 double drift is an implementation bug, not acceptable behavior.
+        assertEquals("0.3", calc.evaluate("0.1 + 0.2"))
     }
 
     // ====================================================================
